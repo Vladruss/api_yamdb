@@ -60,9 +60,7 @@ class CategoryList(generics.ListCreateAPIView):
 class GenreList(generics.ListCreateAPIView):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = [
-        IsAdminOrReadOnly
-    ]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'slug',]
     pagination_classes = PageNumberPagination
