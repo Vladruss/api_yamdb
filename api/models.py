@@ -1,5 +1,6 @@
 #from django.contrib.auth import get_user_model
 from django.db import models
+from datetime import date
 
 #User = get_user_model()
 
@@ -23,3 +24,19 @@ class Users(models.Model):
         return self.username
 
 
+class Genre(models.Model):
+    name = models.CharField(max_length=25)
+    slug = models.CharField(max_length=50, unique=True)
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=25)
+    slug = models.CharField(max_length=50, unique=True)
+
+
+class Title(models.Model):
+    name = models.CharField(max_length=50)
+    year = models.DateField(auto_now_add=False)
+    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, related_name='category')
+    genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING, related_name='genre')
+    description = models.TextField(max_length=50, null=True, blank=True)
