@@ -1,21 +1,19 @@
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
+from django.contrib.auth import models
 
-from .models import Users
+from .models import Comment, Review, Title
 
-
-
-class UserSerializer(serializers.ModelSerializer):
-    #author = serializers.ReadOnlyField(source='author.username')
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source='author.username')
 
     class Meta:
-        fields = '__all__'
-        model = Users
+        fields = ('id', 'text', 'author', 'pub_date')
+        model = Comment
 
-from rest_framework .serializers import Serializer
 
-class TokSerializer(Serializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source='author.username')
 
-        self.fields['email'] = serializers.EmailField()
-        self.fields['confirmition_code'] = serializers.CharField()
+    class Meta:
+        fields = ['id', 'text', 'author', 'score', 'pub_date']
+        model = Review
