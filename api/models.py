@@ -5,7 +5,7 @@ from datetime import date
 #User = get_user_model()
 
 
-class Users(models.Model):
+class User(models.Model):
     first_name = models.CharField(max_length=25)
     last_name = models.CharField(max_length=25)
     username = models.CharField(max_length=25)
@@ -35,8 +35,9 @@ class Category(models.Model):
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True, blank=False)
     year = models.DateField(auto_now_add=False)
     category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, related_name='category')
-    genre = models.ForeignKey(Genre, on_delete=models.DO_NOTHING, related_name='genre')
+    genre = models.ManyToManyField(Genre, related_name='genre')
     description = models.TextField(max_length=50, null=True, blank=True)
+    #rating = models.ForeignKey(Review, on_delete=models.CASCADE)
