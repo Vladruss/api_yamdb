@@ -5,11 +5,12 @@ from .models import Title, Genre, Category
 
 
 class TitleSerializer(serializers.ModelSerializer):
-    year = serializers.DateField(format='%Y', input_formats=['%Y'])
+    genre = serializers.SlugRelatedField(many=True, read_only=True, slug_field='slug')
+    category = serializers.SlugRelatedField(read_only=True, slug_field='slug')
     
     class Meta():
         model = Title
-        fields = ('id', 'name', 'year', 'genre', 'category', 'description')
+        fields = ('__all__')
 
 
 class GenreSerializer(serializers.ModelSerializer):

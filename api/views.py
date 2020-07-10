@@ -58,3 +58,9 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['category', 'genre', 'name', 'year',]
     pagination_classes = PageNumberPagination
+
+    def perform_create(self, serializer):
+        serializer.save(genre=self.request.data['genre'], category=self.request.data['title.category'])
+
+    def perform_update(self, serializer):
+        serializer.save()

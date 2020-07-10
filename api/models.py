@@ -36,8 +36,8 @@ class Category(models.Model):
 
 class Title(models.Model):
     name = models.CharField(max_length=50, unique=True, blank=False)
-    year = models.DateField(auto_now_add=False)
-    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, related_name='category')
-    genre = models.ManyToManyField(Genre, related_name='genre')
-    description = models.TextField(max_length=50, null=True, blank=True)
-    #rating = models.ForeignKey(Review, on_delete=models.CASCADE)
+    year = models.IntegerField(null=False)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='titles', null=True)
+    genre = models.ManyToManyField(Genre, related_name='genres')
+    description = models.TextField(max_length=50, null=True)
+    #rating = models.IntegerField(default=None)
