@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.exceptions import ValidationError
 
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import models
 from django.http import HttpResponse
 
@@ -55,12 +56,18 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
     permission_classes = [GenrePermission]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['category', 'genre', 'name', 'year',]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['category', 'genre', 'year', 'name',]
     pagination_classes = PageNumberPagination
 
     def perform_create(self, serializer):
-        serializer.save(genre=self.request.data['genre'], category=self.request.data['title.category'])
+        serializer.save(
+            genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
+            category=get_object_or_404(Category, slug=self.request.data.get('category'))
+        )
 
     def perform_update(self, serializer):
-        serializer.save()
+        serializer.save(
+            genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
+            category=get_object_or_404(Category, slug=self.request.data.get('category'))
+        )
