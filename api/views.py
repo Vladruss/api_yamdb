@@ -1,40 +1,34 @@
-from rest_framework import viewsets, generics, filters, exceptions, permissions, status
+from rest_framework import viewsets, filters, exceptions, permissions, status, generics
 from rest_framework.response import Response  
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-
-from django.core.mail import send_mail
-from django.contrib.auth import models
-from api.models import User
-from .serializers import UserSerializer, TokSerializer, EmailSerializer
-from .permissions import UserPermission
-from rest_framework import viewsets, generics, filters, exceptions, permissions
 from django_filters.rest_framework import DjangoFilterBackend
-from django.contrib.auth import models
-from rest_framework.views import APIView
-from api.models import User, Genre, Category, Title, Review, Comment
-from .serializers import UserSerializer, TokSerializer,  GenreSerializer, CategorySerializer, TitleSerializer, CommentSerializer, ReviewSerializer
-from .permissions import UserPermission, GenrePermission, AuthorRightPermission, CommentPermission
-from django.http import HttpResponse
-from rest_framework.response import Response  
-from rest_framework import status
 from django.core.mail import send_mail
+from django.contrib.auth import models
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
+
+from api.models import User, Genre, Category, Title, Review, Comment
+from api.serializers import UserSerializer, TokSerializer, EmailSerializer,  GenreSerializer, CategorySerializer, TitleSerializer, CommentSerializer, ReviewSerializer
+from api.permissions import UserPermission, GenrePermission, CommentPermission 
 from api.filters import TitleFilter
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = [ UserPermission]
+    permission_classes = [ permissions.IsAuthenticated , UserPermission]
 
 
 class APIUser(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    
     def get(self, request):
         user = User.objects.get(username=request.user.username)
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
     def patch(self, request):
         user = User.objects.get(username=request.user.username)
         serializer = UserSerializer(user, data=request.data, partial=True)
@@ -71,10 +65,12 @@ class Tok(TokenObtainPairView):
 
 class APIUser(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    
     def get(self, request):
         user = User.objects.get(username=request.user.username)
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
     def patch(self, request):
         user = User.objects.get(username=request.user.username)
         serializer = UserSerializer(user, data=request.data, partial=True)
@@ -83,15 +79,18 @@ class APIUser(APIView):
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class GenreList(generics.ListCreateAPIView):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = [GenrePermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
     filter_backends = [filters.SearchFilter]
-    search_fields = [ 'name',]
+    search_fields = [ 'name']
+
 
 class APIGenre(APIView):
     permission_classes = [permissions.IsAdminUser]
+    
     def delete(self, request, slug):
         genre = Genre.objects.get(slug=slug)
         genre.delete()
@@ -101,12 +100,14 @@ class APIGenre(APIView):
 class CategoryList(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [GenrePermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
     filter_backends = [filters.SearchFilter]
-    search_fields = ['name',]
+    search_fields = ['name']
+
 
 class APICategory(APIView):
     permission_classes = [permissions.IsAdminUser]
+    
     def delete(self, request, slug):
         category = Category.objects.get(slug=slug)
         category.delete()
@@ -116,7 +117,7 @@ class APICategory(APIView):
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-    permission_classes = [GenrePermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -130,9 +131,9 @@ class TitleViewSet(viewsets.ModelViewSet):
         serializer.save(
             genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
             category=get_object_or_404(Category, slug=self.request.data.get('category'))
-        )
+            )
 
-from django.db.models import Avg
+
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
@@ -160,6 +161,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title.rating = avg_score['score__avg']
         title.save(update_fields=['rating'])
 
+
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
@@ -168,7 +170,6 @@ class CommentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = self.queryset
         return queryset.filter(review_id=self.kwargs['review_id'])
-
 
     def perform_create(self, serializer):
         review = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
