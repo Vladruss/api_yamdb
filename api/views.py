@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
+from api.filters import TitleFilter
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -110,21 +111,15 @@ class APICategory(APIView):
         category = Category.objects.get(slug=slug)
         category.delete()
         return Response(status=204)
-'''
-from django_filters import rest_framework as filters
-class ProductFilter(filters.FilterSet):
-    
-    class Meta:
-        model = Title
-        fields = ['category', 'genre__slug', 'name', 'year',]'''
+
+
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
     permission_classes = [GenrePermission]
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ['category', 'genre__slug', 'name', 'year',]
-    #filter_backends = [filters.SearchFilter]
-    #search_fields = ['category__slug', 'genre__slug', 'name', 'year',]
+    filterset_class = TitleFilter
+
     def perform_create(self, serializer):
         serializer.save(
             genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
