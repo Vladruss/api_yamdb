@@ -15,8 +15,8 @@ class User(AbstractUser):
     ]
     role = models.CharField(max_length=25, choices=User_role, default=USER)
     
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    #USERNAME_FIELD = 'email'
+    #REQUIRED_FIELDS = []
 
 class Genre(models.Model):
     name = models.CharField(max_length=25)
@@ -34,7 +34,7 @@ class Title(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='titles', null=True)
     genre = models.ManyToManyField(Genre, related_name='genres')
     description = models.TextField(max_length=50, null=True)
-    rating = models.IntegerField(default=None, null=True)
+    rating = models.IntegerField(default=None, null=True, blank=True)
 
     
 class Review(models.Model):

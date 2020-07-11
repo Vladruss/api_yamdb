@@ -113,6 +113,7 @@ class APICategory(APIView):
 '''
 from django_filters import rest_framework as filters
 class ProductFilter(filters.FilterSet):
+    
     class Meta:
         model = Title
         fields = ['category', 'genre__slug', 'name', 'year',]'''
@@ -120,10 +121,10 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
     permission_classes = [GenrePermission]
-    #filter_backends = (DjangoFilterBackend,)
-    #filterset_fields = ['category', 'genre__slug', 'name', 'year',]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['category', 'genre__slug', 'name', 'year',]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ['category', 'genre__slug', 'name', 'year',]
+    #filter_backends = [filters.SearchFilter]
+    #search_fields = ['category__slug', 'genre__slug', 'name', 'year',]
     def perform_create(self, serializer):
         serializer.save(
             genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
@@ -140,7 +141,7 @@ from django.db.models import Avg
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [CommentPermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, CommentPermission]
     
     def get_queryset(self):
         queryset = self.queryset
@@ -161,8 +162,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [CommentPermission]
-    
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, CommentPermission]
+
     def get_queryset(self):
         queryset = self.queryset
         return queryset.filter(review_id=self.kwargs['review_id'])

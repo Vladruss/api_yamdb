@@ -17,4 +17,6 @@ class AuthorRightPermission(permissions.BasePermission):
 
 class CommentPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return bool(obj.author == request.user or request.method in permissions.SAFE_METHODS or request.user.role == 'admin' or request.user.role == 'moderator')
+        '''if not request.user.is_authenticated:
+            return request.method in permissions.SAFE_METHODS'''
+        return bool((obj.author == request.user and  request.auth )or request.method in permissions.SAFE_METHODS or (request.user.role == 'admin' and request.auth) or (request.user.role == 'moderator' and request.auth) )
