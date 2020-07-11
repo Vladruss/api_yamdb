@@ -8,7 +8,18 @@ from django.contrib.auth import models
 from api.models import User
 from .serializers import UserSerializer, TokSerializer, EmailSerializer
 from .permissions import UserPermission
-
+from rest_framework import viewsets, generics, filters, exceptions, permissions
+from django_filters.rest_framework import DjangoFilterBackend
+from django.contrib.auth import models
+from rest_framework.views import APIView
+from api.models import User, Genre, Category, Title, Review, Comment
+from .serializers import UserSerializer, TokSerializer,  GenreSerializer, CategorySerializer, TitleSerializer, CommentSerializer, ReviewSerializer
+from .permissions import UserPermission, GenrePermission, AuthorRightPermission, CommentPermission
+from django.http import HttpResponse
+from rest_framework.response import Response  
+from rest_framework import status
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -55,3 +66,108 @@ class APIEmail(APIView):
 
 class Tok(TokenObtainPairView):
     serializer_class = TokSerializer
+
+
+class APIUser(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get(self, request):
+        user = User.objects.get(username=request.user.username)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    def patch(self, request):
+        user = User.objects.get(username=request.user.username)
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GenreList(generics.ListCreateAPIView):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    permission_classes = [GenrePermission]
+    filter_backends = [filters.SearchFilter]
+    search_fields = [ 'name',]
+
+class APIGenre(APIView):
+    permission_classes = [permissions.IsAdminUser]
+    def delete(self, request, slug):
+        genre = Genre.objects.get(slug=slug)
+        genre.delete()
+        return Response(status=204)
+
+
+class CategoryList(generics.ListCreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [GenrePermission]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name',]
+
+class APICategory(APIView):
+    permission_classes = [permissions.IsAdminUser]
+    def delete(self, request, slug):
+        category = Category.objects.get(slug=slug)
+        category.delete()
+        return Response(status=204)
+'''
+from django_filters import rest_framework as filters
+class ProductFilter(filters.FilterSet):
+    class Meta:
+        model = Title
+        fields = ['category', 'genre__slug', 'name', 'year',]'''
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    permission_classes = [GenrePermission]
+    #filter_backends = (DjangoFilterBackend,)
+    #filterset_fields = ['category', 'genre__slug', 'name', 'year',]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['category', 'genre__slug', 'name', 'year',]
+    def perform_create(self, serializer):
+        serializer.save(
+            genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
+            category=Category.objects.get( slug=self.request.data.get('category'))
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(
+            genre=Genre.objects.filter(slug__in=self.request.data.getlist('genre')),
+            category=get_object_or_404(Category, slug=self.request.data.get('category'))
+        )
+
+from django.db.models import Avg
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [CommentPermission]
+    
+    def get_queryset(self):
+        queryset = self.queryset
+        return queryset.filter(title_id=self.kwargs['title_id'])
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
+        if int(self.request.data['score'])>10 or int(self.request.data['score'])<1:
+            raise exceptions.ValidationError('Оценка должна быть от 1 до 10')
+        if Review.objects.filter(author=self.request.user, title_id=title).exists():
+            raise exceptions.ValidationError('Вы уже поставили оценку')
+        serializer.save(author=self.request.user, title_id=title)
+        avg_score = Review.objects.filter(title_id=title).aggregate(Avg('score'))
+        title.rating = avg_score['score__avg']
+        title.save(update_fields=['rating'])
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [CommentPermission]
+    
+    def get_queryset(self):
+        queryset = self.queryset
+        return queryset.filter(review_id=self.kwargs['review_id'])
+
+
+    def perform_create(self, serializer):
+        review = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
+        serializer.save(author=self.request.user, review_id=review)

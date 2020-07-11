@@ -17,3 +17,49 @@ class User(AbstractUser):
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+
+class Genre(models.Model):
+    name = models.CharField(max_length=25)
+    slug = models.CharField(max_length=50, unique=True)
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=25)
+    slug = models.CharField(max_length=50, unique=True)
+
+
+class Title(models.Model):
+    name = models.CharField(max_length=50, unique=True, blank=False)
+    year = models.IntegerField(null=False)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='titles', null=True)
+    genre = models.ManyToManyField(Genre, related_name='genres')
+    description = models.TextField(max_length=50, null=True)
+    rating = models.IntegerField(default=None, null=True)
+
+    
+class Review(models.Model):
+    text = models.TextField()
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="review"
+    )
+    score = models.IntegerField()
+    pub_date = models.DateTimeField(auto_now_add=True)
+    title_id = models.ForeignKey(
+        Title, on_delete=models.CASCADE, related_name="review"
+    )
+    def __str__(self):
+        return self.text
+
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="comments"
+    )
+    pub_date = models.DateTimeField(auto_now_add=True)
+    review_id = models.ForeignKey(
+        Review, on_delete=models.CASCADE, related_name="comments"
+    )
+    def __str__(self):
+        return self.text
