@@ -158,6 +158,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title.rating = avg_score['score__avg']
         title.save(update_fields=['rating'])
 
+    def perform_update(self, serializer):
+        title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title_id=title)
+        avg_score = Review.objects.filter(title_id=title).aggregate(Avg('score'))
+        title.rating = avg_score['score__avg']
+        title.save(update_fields=['rating'])
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
