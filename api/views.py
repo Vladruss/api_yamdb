@@ -57,8 +57,15 @@ class TitleViewSet(viewsets.ModelViewSet):
     serializer_class = TitleSerializer
     permission_classes = [GenrePermission]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['category', 'genre', 'year', 'name',]
+    filterset_fields = ['category',  'year', 'name',]
     pagination_classes = PageNumberPagination
+
+    def get_queryset(self):
+        queryset = Genre.objects.all()
+        genre = self.request.query_params.get('genre', None)
+        if genre is not None:
+            queryset.filter(genre=genre)
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(
