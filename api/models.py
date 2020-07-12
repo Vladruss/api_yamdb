@@ -1,5 +1,7 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models import Avg
 
 
 class User(AbstractUser):
@@ -17,8 +19,10 @@ class User(AbstractUser):
         ]
 
     role = models.CharField(max_length=25, choices=UserRole.choices, default=UserRole.USER)
-
+    code = models.UUIDField(default=uuid.uuid4, editable=False)
+    
     USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
 
 class Genre(models.Model):
@@ -42,13 +46,17 @@ class Title(models.Model):
     year = models.IntegerField(null=False)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, related_name='titles', null=True
-        )
+    )
     genre = models.ManyToManyField(Genre, related_name='titles')
     description = models.TextField(max_length=50, null=True)
     rating = models.IntegerField(default=None, null=True, blank=True)
     
     def __str__(self):
         return self.name
+
+    def update_rating(self):
+        self.rating = self.review.all().aggregate(Avg('score'))['score__avg'] 
+        self.save()
     
 
 class Review(models.Model):

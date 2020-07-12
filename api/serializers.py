@@ -1,5 +1,4 @@
-from rest_framework import serializers, exceptions
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import serializers
 
 from api.models import User, Genre, Category, Title, Comment, Review
 
@@ -11,12 +10,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
     
 
-class TokSerializer(TokenObtainPairSerializer):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields[self.username_field] = serializers.CharField()
-        self.fields.pop('password', None)
+class TokenSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True)
 
 
 class SignUpSerializer(serializers.Serializer):
