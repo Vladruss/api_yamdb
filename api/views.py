@@ -4,13 +4,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.mail import send_mail
-from django.contrib.auth import models
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 
 from api.models import User, Genre, Category, Title, Review, Comment
-from api.serializers import UserSerializer, TokSerializer, EmailSerializer,  GenreSerializer, CategorySerializer, TitleSerializer, CommentSerializer, ReviewSerializer
-from api.permissions import UserPermission, GenrePermission, CommentPermission 
+from api.serializers import (UserSerializer, TokSerializer, SignUpSerializer, GenreSerializer, 
+CategorySerializer, TitleSerializer, CommentSerializer, ReviewSerializer
+)
+from api.permissions import IsAdmin, IsAdminOrReadOnly, IsStaffOrOwnerOrReadOnly 
 from api.filters import TitleFilter
 
 
@@ -18,43 +19,34 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = [ permissions.IsAuthenticated , UserPermission]
+    permission_classes = [ permissions.IsAuthenticated , IsAdmin]
 
 
-class APIUser(APIView):
+class MeProfileView(generics.RetrieveUpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     
-    def get(self, request):
-        user = User.objects.get(username=request.user.username)
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+    def get_object(self):
+        return self.request.user
+
+
+class EmailSignUpView(APIView):
+    permission_classes = [permissions.AllowAny]
     
-    def patch(self, request):
-        user = User.objects.get(username=request.user.username)
-        serializer = UserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class APIEmail(APIView):
     def post(self, request):
-        serializer = EmailSerializer(data=request.data)
+        serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
-            Toemail = serializer.data.get('email')
-            if User.objects.filter(email=email).exists():
-                return Response({"Email занят"}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                user = User.objects.create(email=email)
-                Confirmation_code = 1111
-                send_mail(
+            email = serializer.data.get('email')
+            code = generate_unique_code_here
+            user = User.objects.create(email=email, code=code, is_active=False)
+            send_mail(
                     'Подтверждение аккаунта',
-                    'Ваш ключ активации {}'.format(Confirmation_code),
+                    'Ваш ключ активации {}'.format(code),
                     'from@example.com',
-                    [Toemail],
+                    [email],
                     fail_silently=True,
-                )
+            )
             return Response({"Код подтверждения отправлен на вашу почту"}, status=200)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -63,27 +55,10 @@ class Tok(TokenObtainPairView):
     serializer_class = TokSerializer
 
 
-class APIUser(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get(self, request):
-        user = User.objects.get(username=request.user.username)
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-    
-    def patch(self, request):
-        user = User.objects.get(username=request.user.username)
-        serializer = UserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class GenreList(generics.ListCreateAPIView):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = [ 'name']
 
@@ -100,7 +75,7 @@ class APIGenre(APIView):
 class CategoryList(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
@@ -117,7 +92,8 @@ class APICategory(APIView):
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, GenrePermission]
+    
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -137,7 +113,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, CommentPermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsStaffOrOwnerOrReadOnly]
     
     def get_queryset(self):
         queryset = self.queryset
@@ -145,8 +121,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-        if int(self.request.data['score'])>10 or int(self.request.data['score'])<1:
-            raise exceptions.ValidationError('Оценка должна быть от 1 до 10')
         if Review.objects.filter(author=self.request.user, title_id=title).exists():
             raise exceptions.ValidationError('Вы уже поставили оценку')
         serializer.save(author=self.request.user, title_id=title)
@@ -165,7 +139,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, CommentPermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsStaffOrOwnerOrReadOnly]
 
     def get_queryset(self):
         queryset = self.queryset

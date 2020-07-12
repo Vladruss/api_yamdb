@@ -5,18 +5,20 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     bio = models.TextField(max_length=500, blank=True)
     email = models.EmailField(('email address'), unique=True)
-    USER = 'user'
-    ADMIN = 'admin'
-    MODERATOR = 'moderator'
-    User_role = [
-        (USER, 'user'),
-        (ADMIN, 'admin'),
-        (MODERATOR, 'moderator'),
-    ]
-    role = models.CharField(max_length=25, choices=User_role, default=USER)
+    
+    class UserRole:
+        USER = 'user'
+        ADMIN = 'admin'
+        MODERATOR = 'moderator'
+        choices = [
+            (USER, 'user'),
+            (ADMIN, 'admin'),
+            (MODERATOR, 'moderator'),
+        ]
+
+    role = models.CharField(max_length=25, choices=UserRole.choices, default=UserRole.USER)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
 
 
 class Genre(models.Model):
@@ -38,7 +40,9 @@ class Category(models.Model):
 class Title(models.Model):
     name = models.CharField(max_length=50, unique=True, blank=False)
     year = models.IntegerField(null=False)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='titles', null=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, related_name='titles', null=True
+        )
     genre = models.ManyToManyField(Genre, related_name='titles')
     description = models.TextField(max_length=50, null=True)
     rating = models.IntegerField(default=None, null=True, blank=True)

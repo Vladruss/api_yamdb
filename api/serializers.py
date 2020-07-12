@@ -1,6 +1,5 @@
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth import authenticate
 
 from api.models import User, Genre, Category, Title, Comment, Review
 
@@ -20,8 +19,11 @@ class TokSerializer(TokenObtainPairSerializer):
         self.fields.pop('password', None)
 
 
-class EmailSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+class SignUpSerializer(serializers.Serializer):
+    
+    class Meta:
+        model = User
+        fields = ('email',)
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -58,6 +60,7 @@ class CommentSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')
     title_id = serializers.ReadOnlyField(source='title.pk')
+    score = serializers.IntegerField(min_value=1, max_value=10)
     
     class Meta:
         model = Review
