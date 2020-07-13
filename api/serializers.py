@@ -15,7 +15,7 @@ class TokenSerializer(serializers.Serializer):
     code = serializers.CharField(required=True)
 
 
-class SignUpSerializer(serializers.Serializer):
+class SignUpSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User

@@ -19,7 +19,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = [ permissions.IsAuthenticated , IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
 
 class MeProfileView(generics.RetrieveUpdateAPIView):
@@ -39,7 +39,9 @@ class EmailSignUpView(APIView):
         if serializer.is_valid():
             email = serializer.data.get('email')
             code = uuid.uuid4()
-            user = User.objects.create(email=email, username=str(email), code=code, is_active=False)
+            user = User.objects.create(
+                email=email, username=str(email), code=code, is_active=False
+            )
             send_mail(
                 'Подтверждение аккаунта',
                 'Ваш ключ активации {}'.format(code),
@@ -47,7 +49,7 @@ class EmailSignUpView(APIView):
                 [email],
                 fail_silently=True,
             )
-            return Response({'result':"Код подтверждения отправлен на вашу почту"}, status=200)
+            return Response({'result':'Код подтверждения отправлен на вашу почту'}, status=200)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -81,14 +83,13 @@ class GenreListCreteDestroyView(mixins.CreateModelMixin,
                    viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = [
+        permissions.IsAuthenticatedOrReadOnly, 
+        IsAdminOrReadOnly
+    ]
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-
-    def get_permissions(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return [permissions.AllowAny(),]
-        return [permissions.IsAdminUser(),]
 
 
 class CategoryListCreteDestroyView(mixins.CreateModelMixin,
@@ -97,14 +98,13 @@ class CategoryListCreteDestroyView(mixins.CreateModelMixin,
                    viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [
+        permissions.IsAuthenticatedOrReadOnly, 
+        IsAdminOrReadOnly
+    ]
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-
-    def get_permissions(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return [permissions.AllowAny(),]
-        return [permissions.IsAdminUser(),]
 
 
 class TitleViewSet(viewsets.ModelViewSet):

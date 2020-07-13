@@ -6,7 +6,7 @@ from django.db.models import Avg
 
 class User(AbstractUser):
     bio = models.TextField(max_length=500, blank=True)
-    email = models.EmailField(('email address'), unique=True)
+    email = models.EmailField(help_text='email address', unique=True)
     
     class UserRole:
         USER = 'user'
