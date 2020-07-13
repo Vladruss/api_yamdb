@@ -39,9 +39,6 @@ class EmailSignUpView(APIView):
         if serializer.is_valid():
             email = serializer.data.get('email')
             code = uuid.uuid4()
-            user = User.objects.create(
-                email=email, username=str(email), code=code, is_active=False
-            )
             send_mail(
                 'Подтверждение аккаунта',
                 'Ваш ключ активации {}'.format(code),
